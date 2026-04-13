@@ -1,0 +1,93 @@
+---
+interface Props {
+	src: string;
+	alt: string;
+	size?: number;
+	delay?: number;
+	duration?: number;
+	class?: string;
+}
+
+const { src, alt, size = 64, delay = 0, duration = 900, class: className } = Astro.props;
+---
+
+<glitch-avatar
+	data-src={src}
+	data-size={size}
+	data-delay={delay}
+	data-duration={duration}
+>
+	<canvas
+		width={size}
+		height={size}
+		aria-label={alt}
+		role="img"
+		class={className}
+		style="image-rendering: pixelated;"
+	></canvas>
+</glitch-avatar>
+
+<script>
+	class GlitchAvatarElement extends HTMLElement {
+		connectedCallback() {
+			const canvas = this.querySelector("canvas")!;
+			const ctx = canvas.getContext("2d")!;
+			const src = this.dataset.src!;
+			const size = Number(this.dataset.size) || 64;
+			const delay = Number(this.dataset.delay) || 0;
+			const duration = Number(this.dataset.duration) || 900;
+
+			const img = new Image();
+			img.src = src;
+			img.crossOrigin = "anonymous";
+
+			let animFrame: number;
+			let timeout: ReturnType<typeof setTimeout>;
+
+			img.onload = () => {
+				const MAX_BLOCK = 16;
+				const MIN_BLOCK = 1;
+				const startTime = { value: 0 };
+
+				function drawPixelated(blockSize: number) {
+					ctx.clearRect(0, 0, size, size);
+					const offscreen = document.createElement("canvas");
+					const cols = Math.ceil(size / blockSize);
+					const rows = Math.ceil(size / blockSize);
+					offscreen.width = cols;
+					offscreen.height = rows;
+					const offCtx = offscreen.getContext("2d")!;
+					offCtx.drawImage(img, 0, 0, cols, rows);
+					ctx.imageSmoothingEnabled = false;
+					ctx.drawImage(offscreen, 0, 0, size, size);
+				}
+
+				function animate(timestamp: number) {
+					if (!startTime.value) startTime.value = timestamp;
+					const elapsed = timestamp - startTime.value;
+					const progress = Math.min(elapsed / duration, 1);
+					const eased = 1 - Math.pow(1 - progress, 2.5);
+					const blockSize = Math.max(
+						MIN_BLOCK,
+						Math.round(MAX_BLOCK * (1 - eased))
+					);
+					const shouldGlitch = progress < 0.85 && Math.random() < 0.08;
+					if (!shouldGlitch) {
+						drawPixelated(blockSize);
+					}
+					if (progress < 1) {
+						animFrame = requestAnimationFrame(animate);
+					}
+				}
+
+				drawPixelated(MAX_BLOCK);
+
+				timeout = setTimeout(() => {
+					animFrame = requestAnimationFrame(animate);
+				}, delay);
+			};
+		}
+	}
+
+	customElements.define("glitch-avatar", GlitchAvatarElement);
+</script>

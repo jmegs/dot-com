@@ -1,17 +1,51 @@
 ---
-
+import Layout from "../layouts/Layout.astro";
+import BaffleText from "../components/BaffleText.astro";
+import GlitchAvatar from "../components/GlitchAvatar.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout>
+	<div class="page-grid | p-8 h-screen uppercase text-center lg:text-left">
+		<div id="uno" class="lg:mt-auto">
+			<GlitchAvatar
+				src="/avatar.png"
+				alt="picture of john"
+				size={64}
+				delay={0}
+				duration={900}
+				class="mx-auto mb-4 lg:m-0 size-16 rounded-full border-4 border-wash"
+			/>
+		</div>
+		<div id="dos">
+			<h1>
+				<BaffleText text="John Meguerian" delay={150} speed={32} />
+			</h1>
+		</div>
+		<div id="tres">
+			<BaffleText text="Design Manager" delay={450} speed={32} />
+		</div>
+		<div id="cuatro" class="mt-auto flex flex-col gap-4">
+			<p>
+				<BaffleText
+					text={"johnmeguerian\n[at] gmail.com"}
+					delay={800}
+					speed={28}
+				/>
+			</p>
+			<p>
+				<BaffleText
+					text={"Brooklyn\nNew York\nUnited States"}
+					delay={1100}
+					speed={28}
+				/>
+			</p>
+			<p>
+				<BaffleText
+					text="[ 40°40'N, 73°59'W ]"
+					delay={1400}
+					speed={24}
+				/>
+			</p>
+		</div>
+	</div>
+</Layout>

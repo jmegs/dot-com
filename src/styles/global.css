@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+	--background: #f3f1f3;
+	--foreground: #252525;
+	--wash: #ebebeb;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-wash: var(--wash);
+	--font-mono: var(--font-departure-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: #171717;
+		--foreground: #ebebeb;
+		--wash: #252525;
+	}
+}
+
+body {
+	background: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-mono);
+	font-size: var(--text-sm);
+}
+
+::selection {
+	background-color: var(--foreground);
+	color: var(--background);
+}
+
+.page-grid {
+	display: grid;
+	grid:
+		"uno" auto
+		"dos" auto
+		"tres" auto
+		"cuatro" 1fr
+		/ 1fr;
+	& > #uno {
+		grid-area: uno;
+	}
+	& > #dos {
+		grid-area: dos;
+	}
+	& > #tres {
+		grid-area: tres;
+	}
+	& > #cuatro {
+		grid-area: cuatro;
+	}
+
+	@media (min-width: 64rem) {
+		grid:
+			"dos tres" minmax(0, 1fr)
+			"uno cuatro" minmax(0, 1fr)
+			/ minmax(0, 1fr) minmax(0, 1fr);
+	}
+}

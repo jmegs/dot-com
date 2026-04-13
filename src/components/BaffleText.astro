@@ -1,0 +1,75 @@
+---
+interface Props {
+	text: string;
+	delay?: number;
+	speed?: number;
+	scrambleSpeed?: number;
+	class?: string;
+}
+
+const { text, delay = 0, speed = 50, scrambleSpeed = 30, class: className } = Astro.props;
+---
+
+<baffle-text
+	data-text={text}
+	data-delay={delay}
+	data-speed={speed}
+	data-scramble-speed={scrambleSpeed}
+>
+	<span class={className} style="white-space: pre-line;">{text}</span>
+</baffle-text>
+
+<script>
+	const GLYPHS =
+		'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:\'\",./<>?`~';
+
+	function randomGlyph() {
+		return GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+	}
+
+	function scramble(text: string, revealedCount: number) {
+		return text
+			.split("")
+			.map((char, i) => {
+				if (i < revealedCount) return char;
+				if (char === "\n" || char === " ") return char;
+				return randomGlyph();
+			})
+			.join("");
+	}
+
+	class BaffleTextElement extends HTMLElement {
+		connectedCallback() {
+			const span = this.querySelector("span")!;
+			const text = this.dataset.text!;
+			const delay = Number(this.dataset.delay) || 0;
+			const speed = Number(this.dataset.speed) || 50;
+			const scrambleSpeed = Number(this.dataset.scrambleSpeed) || 30;
+
+			let revealed = 0;
+
+			const scrambleInterval = setInterval(() => {
+				span.textContent = scramble(text, revealed);
+			}, scrambleSpeed);
+
+			const delayTimeout = setTimeout(() => {
+				const revealInterval = setInterval(() => {
+					revealed++;
+					while (
+						revealed < text.length &&
+						(text[revealed] === " " || text[revealed] === "\n")
+					) {
+						revealed++;
+					}
+					if (revealed >= text.length) {
+						span.textContent = text;
+						clearInterval(revealInterval);
+						clearInterval(scrambleInterval);
+					}
+				}, speed);
+			}, delay);
+		}
+	}
+
+	customElements.define("baffle-text", BaffleTextElement);
+</script>
