@@ -1,0 +1,78 @@
+---
+// Full-viewport generative "chroma" orb background, fixed behind page content.
+---
+
+<canvas class="chroma-bg" aria-hidden="true"></canvas>
+
+<style>
+	.chroma-bg {
+		position: fixed;
+		inset: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: -2;
+		display: block;
+	}
+</style>
+
+<script>
+	import { createChromaRenderer } from "../lib/chroma";
+
+	const canvas = document.querySelector<HTMLCanvasElement>("canvas.chroma-bg")!;
+	const ctx = canvas.getContext("2d")!;
+	const draw = createChromaRenderer();
+
+	// Fixed dark appearance regardless of OS preference.
+	const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+	let width = 0;
+	let height = 0;
+	let rafId = 0;
+	let startTime: number | null = null;
+
+	function resize() {
+		width = window.innerWidth;
+		height = window.innerHeight;
+		const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
+		canvas.width = Math.round(width * dpr);
+		canvas.height = Math.round(height * dpr);
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+	}
+
+	function renderFrame(time: number) {
+		ctx.clearRect(0, 0, width, height);
+		draw(ctx, width, height, time, "dark");
+	}
+
+	function stopLoop() {
+		if (rafId) cancelAnimationFrame(rafId);
+		rafId = 0;
+		startTime = null;
+	}
+
+	function start() {
+		stopLoop();
+		resize();
+		if (reduceMq.matches) {
+			renderFrame(0);
+			return;
+		}
+		const loop = (ts: number) => {
+			if (startTime === null) startTime = ts;
+			renderFrame((ts - startTime) / 1000);
+			rafId = requestAnimationFrame(loop);
+		};
+		rafId = requestAnimationFrame(loop);
+	}
+
+	let resizeTimer: ReturnType<typeof setTimeout>;
+	window.addEventListener("resize", () => {
+		clearTimeout(resizeTimer);
+		resizeTimer = setTimeout(start, 150);
+	});
+
+	// Re-render when the reduced-motion preference changes.
+	reduceMq.addEventListener("change", start);
+
+	start();
+</script>

@@ -1,5 +1,6 @@
 ---
 import { Font } from "astro:assets";
+import ChromaBackground from "../components/ChromaBackground.astro";
 import "../styles/global.css";
 ---
 
@@ -8,12 +9,14 @@ import "../styles/global.css";
 		<meta charset="utf-8" />
     <link rel="icon" type="image/gif" href="/favicon.gif" />
 		<meta name="viewport" content="width=device-width" />
+		<meta name="theme-color" content="#0b0704" />
 		<title>John Meguerian</title>
 		<meta name="description" content="Design manager based in New York City" />
 		<Font cssVariable="--font-departure-mono" />
 		<script src="https://cdn.usefathom.com/script.js" data-site="TVQPDWBA" defer></script>
 	</head>
 	<body class="min-h-full flex flex-col">
+		<ChromaBackground />
 		<slot />
 	</body>
 </html>

@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
+/* Pinned to the dark theme — the chroma background always renders the dark palette. */
 :root {
-	--background: #f3f1f3;
-	--foreground: #252525;
-	--wash: #ebebeb;
+	--background: #171717;
+	--foreground: #ebebeb;
+	--wash: #252525;
 }
 
 @theme inline {
@@ -13,19 +14,28 @@
 	--font-mono: var(--font-departure-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #171717;
-		--foreground: #ebebeb;
-		--wash: #252525;
-	}
+/* Fallback base color shown before the chroma canvas paints. */
+html {
+	background: var(--background);
 }
 
 body {
-	background: var(--background);
+	background: transparent;
 	color: var(--foreground);
 	font-family: var(--font-mono);
 	font-size: var(--text-sm);
+}
+
+/* Subtle scrim between the chroma canvas (z-index -2) and the page content,
+   gently lifting text contrast over the orbs without hiding the art. */
+body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	background: var(--background);
+	opacity: 0.3;
+	pointer-events: none;
 }
 
 ::selection {
