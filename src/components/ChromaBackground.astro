@@ -25,7 +25,9 @@
 <script>
 	import { createChromaRenderer, type Appearance } from "../lib/chroma";
 
-	const CROSSFADE_MS = 700;
+	const CROSSFADE_MS = 700; // manual click — snappy feedback
+	const AUTO_CROSSFADE_MS = 2500; // ambient drift — slow dissolve
+	const AUTO_REROLL_MS = 15000; // time between ambient shuffles
 
 	const canvas = document.querySelector<HTMLCanvasElement>("canvas.chroma-bg:not(.chroma-fade)")!;
 	const ctx = canvas.getContext("2d")!;
@@ -90,11 +92,12 @@
 			rafId = requestAnimationFrame(loop);
 		};
 		rafId = requestAnimationFrame(loop);
+		scheduleAuto();
 	}
 
 	let fadeCleanup: ReturnType<typeof setTimeout> | undefined;
 
-	function reroll() {
+	function reroll(fadeMs = CROSSFADE_MS) {
 		const next = createChromaRenderer(crypto.randomUUID());
 
 		// Reduced motion: swap instantly, no crossfade.
@@ -121,12 +124,24 @@
 
 		// Dissolve the old snapshot to reveal the new composition underneath.
 		requestAnimationFrame(() => {
-			fade.style.transition = `opacity ${CROSSFADE_MS}ms ease`;
+			fade.style.transition = `opacity ${fadeMs}ms ease`;
 			fade.style.opacity = "0";
 		});
 		fadeCleanup = setTimeout(() => {
 			fadeCtx.clearRect(0, 0, fade.width, fade.height);
-		}, CROSSFADE_MS + 50);
+		}, fadeMs + 50);
+	}
+
+	// Ambient cadence: slowly crossfade to a new seed on a timer. Paused under
+	// reduced motion and while the tab is hidden; reset on any manual re-roll.
+	let autoTimer: ReturnType<typeof setTimeout> | undefined;
+	function scheduleAuto() {
+		clearTimeout(autoTimer);
+		if (reduceMq.matches) return;
+		autoTimer = setTimeout(() => {
+			if (!document.hidden) reroll(AUTO_CROSSFADE_MS);
+			scheduleAuto();
+		}, AUTO_REROLL_MS);
 	}
 
 	let resizeTimer: ReturnType<typeof setTimeout>;
@@ -142,7 +157,18 @@
 		// when animating, the rAF loop already reads the new appearance.
 	});
 	reduceMq.addEventListener("change", start);
-	window.addEventListener("chroma:reroll", reroll);
+
+	// Manual re-roll (avatar click): snappy crossfade, then reset the cadence so
+	// an ambient shuffle doesn't fire right on the heels of an interaction.
+	window.addEventListener("chroma:reroll", () => {
+		reroll();
+		scheduleAuto();
+	});
+
+	// Restart the cadence cleanly when returning to the tab.
+	document.addEventListener("visibilitychange", () => {
+		if (!document.hidden) scheduleAuto();
+	});
 
 	start();
 </script>
