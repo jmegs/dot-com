@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
-/* Pinned to the dark theme — the chroma background always renders the dark palette. */
+/* Token defaults follow the OS theme. --background is a pre-paint fallback that
+   ChromaBackground overrides at runtime with the palette's base color. */
 :root {
-	--background: #171717;
-	--foreground: #ebebeb;
-	--wash: #252525;
+	--background: #f3f1f3;
+	--foreground: #252525;
+	--wash: #ebebeb;
 }
 
 @theme inline {
@@ -12,6 +13,14 @@
 	--color-foreground: var(--foreground);
 	--color-wash: var(--wash);
 	--font-mono: var(--font-departure-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: #171717;
+		--foreground: #ebebeb;
+		--wash: #252525;
+	}
 }
 
 /* Fallback base color shown before the chroma canvas paints. */

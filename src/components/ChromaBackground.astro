@@ -1,8 +1,10 @@
 ---
 // Full-viewport generative "chroma" orb background, fixed behind page content.
+// The avatar (see index.astro) dispatches "chroma:reroll" to shuffle the seed.
 ---
 
 <canvas class="chroma-bg" aria-hidden="true"></canvas>
+<canvas class="chroma-bg chroma-fade" aria-hidden="true"></canvas>
 
 <style>
 	.chroma-bg {
@@ -13,17 +15,41 @@
 		z-index: -2;
 		display: block;
 	}
+	/* Crossfade overlay: holds a snapshot of the outgoing composition. */
+	.chroma-fade {
+		opacity: 0;
+		pointer-events: none;
+	}
 </style>
 
 <script>
-	import { createChromaRenderer } from "../lib/chroma";
+	import { createChromaRenderer, type Appearance } from "../lib/chroma";
 
-	const canvas = document.querySelector<HTMLCanvasElement>("canvas.chroma-bg")!;
+	const CROSSFADE_MS = 700;
+
+	const canvas = document.querySelector<HTMLCanvasElement>("canvas.chroma-bg:not(.chroma-fade)")!;
 	const ctx = canvas.getContext("2d")!;
-	const draw = createChromaRenderer();
+	const fade = document.querySelector<HTMLCanvasElement>("canvas.chroma-fade")!;
+	const fadeCtx = fade.getContext("2d")!;
 
-	// Fixed dark appearance regardless of OS preference.
+	// Mutable identity — replaced on re-roll. Fresh random seed every page load.
+	let renderer = createChromaRenderer(crypto.randomUUID());
+
+	const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
 	const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+	function appearance(): Appearance {
+		return darkMq.matches ? "dark" : "light";
+	}
+
+	// Match the page base + Safari theme-color to the current palette background.
+	function syncTheme() {
+		const bg = renderer.baseColor(appearance());
+		document.documentElement.style.setProperty("--background", bg);
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute("content", bg);
+	}
 
 	let width = 0;
 	let height = 0;
@@ -41,7 +67,7 @@
 
 	function renderFrame(time: number) {
 		ctx.clearRect(0, 0, width, height);
-		draw(ctx, width, height, time, "dark");
+		renderer.draw(ctx, width, height, time, appearance());
 	}
 
 	function stopLoop() {
@@ -53,6 +79,7 @@
 	function start() {
 		stopLoop();
 		resize();
+		syncTheme();
 		if (reduceMq.matches) {
 			renderFrame(0);
 			return;
@@ -65,14 +92,57 @@
 		rafId = requestAnimationFrame(loop);
 	}
 
+	let fadeCleanup: ReturnType<typeof setTimeout> | undefined;
+
+	function reroll() {
+		const next = createChromaRenderer(crypto.randomUUID());
+
+		// Reduced motion: swap instantly, no crossfade.
+		if (reduceMq.matches) {
+			renderer = next;
+			syncTheme();
+			renderFrame(0);
+			return;
+		}
+
+		// Snapshot the current frame into the overlay (1:1 device pixels).
+		clearTimeout(fadeCleanup);
+		fade.width = canvas.width;
+		fade.height = canvas.height;
+		fadeCtx.setTransform(1, 0, 0, 1, 0, 0);
+		fadeCtx.clearRect(0, 0, fade.width, fade.height);
+		fadeCtx.drawImage(canvas, 0, 0);
+		fade.style.transition = "none";
+		fade.style.opacity = "1";
+
+		// Swap identity — the running rAF loop renders `next` from the next frame.
+		renderer = next;
+		syncTheme();
+
+		// Dissolve the old snapshot to reveal the new composition underneath.
+		requestAnimationFrame(() => {
+			fade.style.transition = `opacity ${CROSSFADE_MS}ms ease`;
+			fade.style.opacity = "0";
+		});
+		fadeCleanup = setTimeout(() => {
+			fadeCtx.clearRect(0, 0, fade.width, fade.height);
+		}, CROSSFADE_MS + 50);
+	}
+
 	let resizeTimer: ReturnType<typeof setTimeout>;
 	window.addEventListener("resize", () => {
 		clearTimeout(resizeTimer);
 		resizeTimer = setTimeout(start, 150);
 	});
 
-	// Re-render when the reduced-motion preference changes.
+	// Re-render when the OS theme or reduced-motion preference changes.
+	darkMq.addEventListener("change", () => {
+		syncTheme();
+		if (reduceMq.matches || !rafId) renderFrame(0);
+		// when animating, the rAF loop already reads the new appearance.
+	});
 	reduceMq.addEventListener("change", start);
+	window.addEventListener("chroma:reroll", reroll);
 
 	start();
 </script>

@@ -13,9 +13,6 @@
 
 import { createNoise2D } from "simplex-noise";
 
-// ── Fixed identity ──────────────────────────────────────────────────────────
-const SEED_UUID = "e51c492d-8f60-4664-95ce-6064e96a19da";
-
 // chroma schema defaults
 const ORB_COUNT = 5;
 const ORB_RADIUS = 0.45;
@@ -198,21 +195,36 @@ function generatePalette(
 }
 
 // ── Renderer ──────────────────────────────────────────────────────────────────
-type DrawFn = (
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  time: number,
-  appearance: Appearance,
-) => void;
+export type ChromaRenderer = {
+  draw: (
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    time: number,
+    appearance: Appearance,
+  ) => void;
+  /** Palette base background (colors[0]) for an appearance — for theme-color match. */
+  baseColor: (appearance: Appearance) => string;
+};
 
 /**
- * Build a chroma draw() bound to the fixed seed. The grain texture depends only
- * on the seed-derived noise (not size or time), so it is baked once and reused.
+ * Build a chroma renderer bound to `uuid` (random per call by default). Both the
+ * light and dark palettes are precomputed from the same seed (identical hues,
+ * different lightness ramp) so the renderer can follow the OS theme live. The
+ * grain texture depends only on the seed-derived noise, so it is baked once.
  */
-export function createChromaRenderer(): DrawFn {
-  const seed = seedFromUuid(SEED_UUID);
+export function createChromaRenderer(
+  uuid: string = crypto.randomUUID(),
+): ChromaRenderer {
+  const seed = seedFromUuid(uuid);
   const noise2D = createNoise2D(mulberry32(seed + 1));
+
+  // Each palette uses its own fresh stream (seed ^ 0xdeadbeef) — same draws,
+  // same hues; only the appearance-dependent lightness/chroma ramp differs.
+  const palettes: Record<Appearance, Palette> = {
+    dark: generatePalette(mulberry32(seed ^ 0xdeadbeef), HARMONY, "dark"),
+    light: generatePalette(mulberry32(seed ^ 0xdeadbeef), HARMONY, "light"),
+  };
 
   // Bake the grain texture once (lazy — keeps `document` out of module init / SSR).
   let grainCanvas: HTMLCanvasElement | null = null;
@@ -240,22 +252,17 @@ export function createChromaRenderer(): DrawFn {
     return c;
   };
 
-  return (ctx, width, height, time, appearance) => {
-    // Palette uses its own independent stream (seed ^ 0xdeadbeef).
-    const palette = generatePalette(
-      mulberry32(seed ^ 0xdeadbeef),
-      HARMONY,
-      appearance,
-    );
+  const draw: ChromaRenderer["draw"] = (ctx, width, height, time, appearance) => {
+    const colors = palettes[appearance].colors;
+    const bg = colors[0];
+    const accents = colors.slice(1);
+    const lightBg = isLightHex(bg);
+
     // Orb positions use a fresh render stream every frame (positions stable;
     // only the simplex drift `t` advances over time).
     const rng = mulberry32(seed);
 
     const t = time * AMBIENT_SPEED;
-    const colors = palette.colors;
-    const bg = colors[0];
-    const accents = colors.slice(1);
-    const lightBg = isLightHex(bg);
 
     // Background
     ctx.globalCompositeOperation = "source-over";
@@ -316,4 +323,6 @@ export function createChromaRenderer(): DrawFn {
       ctx.globalCompositeOperation = "source-over";
     }
   };
+
+  return { draw, baseColor: (a) => palettes[a].colors[0] };
 }

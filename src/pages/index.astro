@@ -7,14 +7,21 @@ import GlitchAvatar from "../components/GlitchAvatar.astro";
 <Layout>
 	<div class="page-grid | p-8 h-screen uppercase text-center lg:text-left">
 		<div id="uno" class="lg:mt-auto">
-			<GlitchAvatar
-				src="/avatar.png"
-				alt="picture of john"
-				size={64}
-				delay={0}
-				duration={900}
-				class="mx-auto mb-4 lg:m-0 size-16 rounded-full border-4 border-wash"
-			/>
+			<button
+				type="button"
+				class="chroma-reroll | mx-auto mb-4 lg:m-0 block appearance-none border-0 bg-transparent p-0 cursor-pointer rounded-full"
+				aria-label="Shuffle background"
+				title="Shuffle background"
+			>
+				<GlitchAvatar
+					src="/avatar.png"
+					alt="picture of john"
+					size={64}
+					delay={0}
+					duration={900}
+					class="size-16 rounded-full"
+				/>
+			</button>
 		</div>
 		<div id="dos">
 			<h1>
@@ -49,3 +56,12 @@ import GlitchAvatar from "../components/GlitchAvatar.astro";
 		</div>
 	</div>
 </Layout>
+
+<script>
+	// The avatar doubles as a hidden control: click to re-roll the background.
+	document
+		.querySelector<HTMLButtonElement>("button.chroma-reroll")
+		?.addEventListener("click", () => {
+			window.dispatchEvent(new CustomEvent("chroma:reroll"));
+		});
+</script>
