@@ -9,9 +9,15 @@
 <style>
 	.chroma-bg {
 		position: fixed;
-		inset: 0;
-		width: 100vw;
-		height: 100vh;
+		top: calc(-1 * env(safe-area-inset-top, 0px));
+		left: calc(-1 * env(safe-area-inset-left, 0px));
+		width: calc(
+			100vw + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)
+		);
+		height: 100vh; /* fallback */
+		height: calc(
+			100lvh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)
+		);
 		z-index: -2;
 		display: block;
 	}
@@ -27,7 +33,7 @@
 
 	const CROSSFADE_MS = 700; // manual click — snappy feedback
 	const AUTO_CROSSFADE_MS = 2500; // ambient drift — slow dissolve
-	const AUTO_REROLL_MS = 15000; // time between ambient shuffles
+	const AUTO_REROLL_MS = 10000; // time between ambient shuffles
 
 	const canvas = document.querySelector<HTMLCanvasElement>("canvas.chroma-bg:not(.chroma-fade)")!;
 	const ctx = canvas.getContext("2d")!;
@@ -59,8 +65,11 @@
 	let startTime: number | null = null;
 
 	function resize() {
-		width = window.innerWidth;
-		height = window.innerHeight;
+		// Measure the canvas itself (sized to 100lvh in CSS) rather than the
+		// window's *small* viewport, so the buffer covers the full screen
+		// including behind iOS Safari's chrome.
+		width = canvas.clientWidth;
+		height = canvas.clientHeight;
 		const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
 		canvas.width = Math.round(width * dpr);
 		canvas.height = Math.round(height * dpr);

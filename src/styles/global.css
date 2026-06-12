@@ -54,6 +54,10 @@ body::before {
 
 .page-grid {
 	display: grid;
+	/* 2rem base padding that grows into the iOS safe areas, so content clears
+	   the status bar / notch and the floating address bar / home indicator. */
+	padding: max(2rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right))
+		max(2rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left));
 	grid:
 		"uno" auto
 		"dos" auto
